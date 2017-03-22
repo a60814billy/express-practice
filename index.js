@@ -15,43 +15,24 @@ function runApp () {
   app.start()
 }
 
-function autoMigration () {
-  const migrationUtil = require('./lib/core/migration')
-  const migrationFilePath = path.resolve(__dirname, './lib/model/migrations')
-
-  logger.info('Starting database auto migration')
-  logger.debug(`Migration Path: ${migrationFilePath}`)
-
-  migrationUtil.getSequelize(config.db).then(function (sequelize) {
-    sequelize.authenticate()
-      .then(function () {
-        logger.debug('Database connected.')
-      })
-      .then(function () {
-        return migrationUtil.createMigrator(sequelize)
-      })
-      .then(function (migrator) {
-        return migrationUtil.runMigration(sequelize, migrator)
-      })
-      .then(function () {
-        runApp()
-      })
-      .catch(function (err) {
-        if (err.message === 'SequelizeMeta schema not esixt.') {
-          logger.info('SequlizeMeta not found.')
-          return runApp()
-        }
-        throw err
-      })
-  })
-}
-
 if (util.isUndefined(config)) {
   throw new Error('Fail to load config file')
 }
 
 if (config.db.auto_migration) {
-  autoMigration()
+  const AutoMigration = require('hackmd-auto-migration')
+  let autoMigration = new AutoMigration({
+    migrations: {
+      path: path.resolve(__dirname, './lib/model/migrations')
+    },
+    logging: logger,
+    db: config.db
+  })
+  autoMigration.run().then(function () {
+    runApp()
+  }).catch(function (err) {
+    throw err
+  })
 } else {
   runApp()
 }
